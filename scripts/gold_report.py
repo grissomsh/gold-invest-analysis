@@ -162,6 +162,48 @@ KEY_BIAS = {
 }
 
 
+# 因子悬停/速查说明(HTML 报告): 口径 + 高分解读。冷方向因子"分数高"=原始值
+# 处于低位(反向分位), 解读按"分数高代表什么"来写。
+FACTOR_TIPS = {
+    # 温度-估值
+    "gold_m2":    "口径: 伦敦金÷美国M2, 10年滚动分位。高分=相对货币供应很贵——温度分最核心的估值锚, 长期看均值回归。",
+    "gold_silver": "口径: 金银比(XAU÷XAG), 3年滚动分位, 反向。高分=金银比处于低位=白银端更亢奋, 贵金属情绪整体偏热。",
+    "gold_oil":   "口径: 金油比(XAU÷WTI), 3年滚动分位, 反向。高分=金相对原油便宜——实体需求端不弱, 黄金估值不算贵。",
+    "real_rate":  "口径: 10Y TIPS 实际利率(DFII10), 10年分位, 反向。高分=实际利率处于低位=持有黄金的机会成本低(利多环境)。2022后央行购金使该锚弱化, 权重刻意压低。",
+    # 温度-趋势
+    "ma250_dev":  "口径: 现价相对250日均线的偏离, 分段映射。高分=价格深入年线上方, 中期趋势强; 低于40分=价格在年线下方。",
+    "mom20":      "口径: 20日收益的3年滚动分位。高分=近一个月涨幅在自身历史上罕见——最敏感的短视角动能。",
+    "mom60":      "口径: 60日收益的3年滚动分位。季度级动能。",
+    "mom120":     "口径: 120日收益的3年滚动分位。半年级动能, 最钝但最能代表趋势延续。",
+    # 温度-拥挤
+    "cftc_net":   "口径: CFTC非商业净多头(投机资金)全历史分位, 周频。高分=投机多头拥挤——上涨动能强但踩踏风险同步积聚(拥挤不等于要跌, 是双向信息)。",
+    "rv20_pct":   "口径: 20日已实现波动率的3年分位。高分=波动罕见地大——无论单边急涨还是恐慌急跌, 此时追加仓位的风险都高。",
+    # 温度-宏观
+    "usd_idx":    "口径: 美元广义贸易加权指数(DTWEXBGS), 3年分位, 反向。高分=美元相对自身历史弱——美元弱则美元计价的金受益。注意: 分数高≠美元点位高。",
+    "vix":        "口径: VIX恐慌指数收盘, 3年分位。高分=市场恐慌情绪罕见地高, 避险资金流入支撑金价。",
+    "breakeven":  "口径: 通胀预期=美债名义10Y(DGS10)−实际10Y(DFII10), 3年分位。高分=市场定价的长期通胀补偿高, 抗通胀配置需求大。",
+    # 关注分
+    "ret1d_z":    "口径: 单日收益相对近250个交易日自身分布的z分数(自排除窗口), tanh压缩到0-100。高分=今天的单日波动相对自身历史罕见——'今天有事发生'的最直接信号。",
+    "ret5d_z":    "口径: 5日收益的z分数(250 obs)。捕捉一周级别的趋势突变, 比单日更稳。",
+    "vol_spike":  "口径: 0.6×RV20水平分位 + 0.4×分位20日抬升幅度。高分=波动不仅罕见地高, 还在快速抬升——异动常先于价格体现。",
+    "news_heat":  "口径: 当日黄金相关快讯条数对本地90日积累的分位(新浪/财联社/金属网三源)。高分=今日新闻面显著热闹——事件驱动的'该看'信号。积累<20日时缺失。",
+    "ath_prox":   "口径: 现价距历史新高的距离, 分段映射。高分=逼近或创新高——强势本身是事件; 权重刻意压低, 因长牛中该值长期高位会抬高关注分底线。",
+}
+
+
+def _glossary_html(keys):
+    """因子口径速查表(折叠块)。"""
+    rows = "".join(
+        f"<tr><td>{_esc(C.FACTOR_META[k]['名'])}</td>"
+        f"<td>{_esc(C.FACTOR_META[k]['方向'])}</td>"
+        f"<td>{_esc(C.FACTOR_META[k]['窗'])}</td>"
+        f"<td>{_esc(FACTOR_TIPS.get(k, ''))}</td></tr>"
+        for k in keys)
+    return ('<details class="gloss"><summary>因子口径速查（点击展开）</summary>'
+            "<table><tr><th>因子</th><th>方向</th><th>窗口</th><th>口径与高分解读</th></tr>"
+            f"{rows}</table></details>")
+
+
 def bull_bear(rep):
     """多空速览: (结论三态, 偏多证据[:3], 偏空证据[:3])。
     每条证据带原始值与分数; 双侧证据数差≥2 且≥2条才给方向, 否则判拉锯
@@ -459,11 +501,17 @@ def write_html(rep):
         "@NOISE@": _fmt(C.PREMIUM_NOISE, 1),
         "@SCORES_PLACEHOLDER@": "" if len(scores) >= 5 else
         '<div class="ph">分数历史需本地逐日积累（≥5个运行日后可画曲线）</div>',
-        "@ATT_DATA@": json.dumps([[f["名"], f["score"]] for f in att["factors"]],
-                                 ensure_ascii=False),
-        "@TEMP_DATA@": json.dumps([[f["名"], f["score"], grp_code.get(f["组"], 0),
-                                    f["方向"]] for f in temp["factors"]],
-                                  ensure_ascii=False),
+        "@ATT_GLOSS@": _glossary_html([f["key"] for f in att["factors"]]),
+        "@TEMP_GLOSS@": _glossary_html([f["key"] for f in temp["factors"]]),
+        "@ATT_DATA@": json.dumps(
+            [[f["名"], f["score"], FACTOR_TIPS.get(f["key"], ""),
+              _raw(f["key"], f["raw"]), f"{f['weight']}%"] for f in att["factors"]],
+            ensure_ascii=False).replace("</", "<\\/"),
+        "@TEMP_DATA@": json.dumps(
+            [[f["名"], f["score"], grp_code.get(f["组"], 0), f["方向"],
+              FACTOR_TIPS.get(f["key"], ""), _raw(f["key"], f["raw"]),
+              f"{f['weight']}%"] for f in temp["factors"]],
+            ensure_ascii=False).replace("</", "<\\/"),
     }
 
     html = _HTML_TEMPLATE
@@ -544,6 +592,11 @@ ul.news li:last-child{border-bottom:none}
 ul.news .nt{color:var(--muted);font-size:12px;margin-right:8px;font-variant-numeric:tabular-nums}
 ul.news .ns{display:inline-block;color:var(--ink2);font-size:12px;margin-right:8px}
 ul.news .nmuted{color:var(--muted)}
+details.gloss{margin-top:10px;font-size:12.5px}
+details.gloss summary{cursor:pointer;color:var(--ink2);user-select:none}
+details.gloss table{margin-top:6px}
+details.gloss td{line-height:1.55;vertical-align:top}
+.howto{font-size:12px;color:var(--ink2);margin:2px 0 6px;line-height:1.6}
 .ph{color:var(--muted);font-size:13px;padding:24px 0;text-align:center}
 footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
 @media (max-width:860px){.hero{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
@@ -607,14 +660,15 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
  </div>
  <div class="card">
   <h3>关注分因子（异动贡献）</h3>
+  <div class="howto">悬停因子条查看口径与解读。分数=该项异动的罕见度，越高说明"今天越有事"；缺失表示数据未积累或源不可得（权重自动摊给其余因子）。</div>
   <div id="attbars" class="chart sq"></div>
+  @ATT_GLOSS@
  </div>
  <div class="card">
   <h3>温度分因子（按组别着色）</h3>
-  <div class="legend"><span><i style="background:var(--c1)"></i>估值</span>
-   <span><i style="background:var(--c2)"></i>趋势</span>
-   <span><i style="background:var(--c3)"></i>拥挤</span></div>
+  <div class="howto">悬停因子条查看口径与解读。条长=该维度在自身历史中的"热"位置；冷方向因子（金银比/金油比/实际利率/美元）分数高 = 压制项处于低位，同样是"热"的证据。组别：<span style="color:var(--c1)">估值蓝</span> / <span style="color:var(--c2)">趋势橙</span> / <span style="color:var(--c3)">拥挤青</span> / <span style="color:var(--muted)">宏观灰</span>。</div>
   <div id="tempbars" class="chart sq"></div>
+  @TEMP_GLOSS@
  </div>
 </div>
 
@@ -711,10 +765,23 @@ if(DATA.scores.length>=5){
     lineStyle:{width:2,color:C2},itemStyle:{color:C2},endLabel:{show:true,formatter:'温度分',fontSize:11,color:INK2}}]});}
 else{var sc=document.getElementById('scores');if(sc)sc.style.display='none';}
 
+/* 因子条形悬停说明: [名,分数,...,口径tip,原始值,权重] → 富 tooltip */
+const TIPX={trigger:'item',confine:true,
+ backgroundColor:'#fcfcfb',borderColor:'rgba(11,11,11,.1)',
+ textStyle:{color:INK,fontSize:12},
+ extraCssText:'max-width:380px;white-space:normal;line-height:1.65;box-shadow:0 2px 12px rgba(11,11,11,.10)'};
+function tipHTML(name,dir,d5,score,raw,wt,tip){
+ const s=(score==null?'<b>缺失</b>（权重自动摊给其余因子）':'<b>'+score.toFixed(1)+'</b>');
+ return '<b>'+name+'</b> <span style="color:#898781">'+dir+' · 权重 '+wt+'</span><br>'
+  +'原始值 '+raw+' · 分数 '+s
+  +(tip?'<br><span style="color:#52514e">'+tip+'</span>':'');}
+
 /* 关注分因子条形(单色) */
 const AF=@ATT_DATA@;
 if(AF.length){
- mk('attbars',{tooltip:{...TIP,trigger:'item'},grid:{left:110,right:44,top:8,bottom:8},
+ mk('attbars',{tooltip:{...TIPX,formatter:p=>{const d=AF[p.dataIndex];
+   return tipHTML(d[0],'异动',null,d[1],d[3],d[4],d[2]);}},
+  grid:{left:110,right:44,top:8,bottom:8},
   xAxis:{type:'value',min:0,max:100,...AXS,splitLine:{show:false}},
   yAxis:{type:'category',inverse:true,data:AF.map(d=>d[0]),
    axisLine:{lineStyle:{color:BASE}},axisTick:{show:false},axisLabel:{color:INK2,fontSize:11}},
@@ -725,8 +792,8 @@ if(AF.length){
 /* 温度分因子条形(按组别着色: 估值蓝/趋势橙/拥挤青/宏观灰) */
 const TF=@TEMP_DATA@,GC={[100]:C1,[200]:C2,[300]:C3,[400]:MUTED};
 if(TF.length){
- mk('tempbars',{tooltip:{...TIP,trigger:'item',
-   formatter:p=>{const d=TF[p.dataIndex];return d[0]+'：'+(d[1]==null?'缺失':d[1].toFixed(1)+'（'+d[3]+'）');}},
+ mk('tempbars',{tooltip:{...TIPX,formatter:p=>{const d=TF[p.dataIndex];
+   return tipHTML(d[0],d[3],null,d[1],d[5],d[6],d[4]);}},
   grid:{left:110,right:44,top:8,bottom:8},
   xAxis:{type:'value',min:0,max:100,...AXS,splitLine:{show:false}},
   yAxis:{type:'category',inverse:true,data:TF.map(d=>d[0]),
