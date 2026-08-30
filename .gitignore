@@ -1,0 +1,9 @@
+# 运行时产物(报告/数据库, 每日自动生成)
+workspace/
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+# macOS
+.DS_Store
