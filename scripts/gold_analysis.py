@@ -21,7 +21,7 @@
 import argparse
 import json
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import gold_alert as AL
 import gold_backtest as BT
@@ -45,6 +45,12 @@ ALIGN_TOL = {
 
 def _shift(d, days):
     return (date.fromisoformat(d) + timedelta(days=days)).isoformat()
+
+
+def now_ts():
+    """报告生成时刻。注意必须用 datetime(带时间) 而非 date——date.strftime
+    对 %H:%M:%S 永远输出 00:00:00。"""
+    return datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def align_series(dates, values, calendar, tol, lag=0):
@@ -330,7 +336,7 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
         "gap_days": G.days_between(calendar[idx - 1], calendar[idx]) if idx >= 1 else 0,
     }
     rep = {
-        "ts": today + "T" + date.today().strftime("%H:%M:%S"),
+        "ts": now_ts(),
         "asof": asof or "",
         "report_date": rep_date,
         "calendar_source": cal_src,

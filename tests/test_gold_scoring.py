@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(
 
 import gold_config as C          # noqa: E402
 import gold_alert as AL          # noqa: E402
+import gold_analysis as A        # noqa: E402
 import gold_backtest as BT       # noqa: E402
 import gold_data_store as store  # noqa: E402
 import gold_report as R          # noqa: E402
@@ -450,6 +451,17 @@ check("存储: 推送去重(当日已发)",
       and not store.alert_sent_today("r1", "2026-08-31")
       and not store.alert_sent_today("r2", "2026-08-30"))
 C.WORKSPACE, C.DB_PATH = _orig_ws, _orig_db          # 还原, 防污染后续断言
+
+# ------------------------------------------------------------
+# 14. 报告时间戳: date 对象格式化 %H:%M:%S 永远得 00:00:00(历史bug), 必须用 datetime
+# ------------------------------------------------------------
+from datetime import datetime as _dt                    # noqa: E402
+_ts = A.now_ts()
+check("时间戳: 格式 YYYY-MM-DDTHH:MM:SS",
+      len(_ts) == 19 and _ts[4] == "-" and _ts[10] == "T", _ts)
+check("时间戳: 非死值00:00:00(除非真实恰为午夜)",
+      not _ts.endswith("T00:00:00")
+      or _dt.now().strftime("%H:%M") == "00:00", _ts)
 
 # ------------------------------------------------------------
 print()
