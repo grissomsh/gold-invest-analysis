@@ -280,11 +280,22 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
         if not asof else [None] * len(calendar)
 
     # ---- 4.6 央行购金(SAFE 月度, 慢变量仅展示不进分数 — framework §6.12) ----
-    cb = None
+    cb, cb_chart = None, {}
     try:
         cb_d, cb_v = F.fetch_cb_gold_cn()
         cb = G.cb_gold_metrics(cb_d, cb_v.get("gold_wanoz", []),
                                cb_v.get("fx_usd", []), xau_a[idx])
+        if cb_d:                                      # 折线图数据: 近60个月
+            n60 = 60
+            t60 = [w * C.TONNES_PER_WANOZ if w is not None else None
+                   for w in cb_v.get("gold_wanoz", [])][-n60:]
+            cb_chart = {
+                "dates": cb_d[-n60:],
+                "tonnes": [round(v, 2) if v is not None else None for v in t60],
+                "net": [round(t60[k] - t60[k - 1], 3)
+                        if k and t60[k] is not None and t60[k - 1] is not None
+                        else None for k in range(len(t60))],
+            }
     except Exception as e:                            # noqa: BLE001
         print(f"   ⚠️ 央行购金(SAFE)拉取失败: {type(e).__name__} {str(e)[:80]}")
 
@@ -386,6 +397,7 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
                   if v and base_core else None for v in ma250[-n_chart:]],
         "premium": [round(v, 3) if v is not None else None
                     for v in prem_full[-n_chart:]],
+        "cb": cb_chart,
         "scores": store.load_scores(min_rows=5),
     }
 

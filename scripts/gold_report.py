@@ -547,6 +547,7 @@ def write_html(rep):
         "ma250": chart.get("ma250") or [],
         "premium": chart.get("premium") or [],
         "premium_noise": C.PREMIUM_NOISE,
+        "cb": chart.get("cb") or {},
         "scores": [[r[0], r[1], r[2]] for r in scores],
     }, ensure_ascii=False).replace("</", "<\\/")
     html = html.replace("@CHART_DATA@", payload)
@@ -728,8 +729,9 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
  </div>
  <div class="card">
   <h3>央行购金 · 中国（月度）</h3>
-  <div class="sub">SAFE 官方储备 · 月频慢变量，仅展示不进分数</div>
-  <table><tr><th>指标</th><th>数值</th></tr>
+  <div class="sub">SAFE 官方储备 · 月频慢变量，仅展示不进分数 · 上图总储备，下图当月净购金（蓝=增持 / 橙=减持）· 近60个月</div>
+  <div id="cbchart" class="chart"></div>
+  <table style="margin-top:10px"><tr><th>指标</th><th>数值</th></tr>
   @CB_ROWS@</table>
  </div>
 </div>
@@ -830,6 +832,30 @@ if(TF.length){
     itemStyle:{color:GC[d[2]]||MUTED,borderRadius:[0,4,4,0]}})),
    label:{show:true,position:'right',fontSize:11,color:INK2,
     formatter:p=>p.value==null?'缺':p.value.toFixed(0)}}]});}
+
+/* 央行购金小倍数: 上折线=总储备(吨), 下柱=当月净购金(蓝=增持/橙=减持) */
+const CB=DATA.cb||{};
+if(CB.dates && CB.dates.length>=3){
+ const cd=CB.dates, ct=CB.tonnes, cn=CB.net;
+ mk('cbchart',{tooltip:{...TIPX,formatter:p=>{
+   const i=p.dataIndex;
+   return cd[i]+'<br>总储备 <b>'+ct[i]+'</b> 吨 · 当月净增 <b>'
+     +(cn[i]==null?'—':(cn[i]>0?'+':'')+cn[i].toFixed(1))+'</b> 吨';}},
+  grid:[{left:46,right:16,top:10,height:'50%'},{left:46,right:16,top:'66%',height:'26%'}],
+  xAxis:[{type:'category',data:cd,...AXS,axisLabel:{color:MUTED,fontSize:10,interval:11}},
+         {type:'category',gridIndex:1,data:cd,...AXS,axisLabel:{color:MUTED,fontSize:10,interval:11}}],
+  yAxis:[{type:'value',scale:true,...AXS},
+         {type:'value',gridIndex:1,...AXS}],
+  series:[
+   {name:'总储备',type:'line',data:ct,showSymbol:false,
+    lineStyle:{width:2,color:C1},itemStyle:{color:C1},
+    areaStyle:{opacity:.06,color:C1}},
+   {name:'当月净购金',type:'bar',xAxisIndex:1,yAxisIndex:1,barWidth:'60%',
+    data:cn.map(v=>({value:v,itemStyle:{color:v==null?MUTED:(v>=0?C1:C2),
+     borderRadius:v>=0?[3,3,0,0]:[0,0,3,3]}})),
+    markLine:{silent:true,symbol:'none',lineStyle:{type:'dashed',color:BASE},
+     label:{show:false},data:[{yAxis:0}]}}]});
+}
 
 /* 国内溢价: 零轴基线 + 噪声带 */
 if(DATA.premium.length){
