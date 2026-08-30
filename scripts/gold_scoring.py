@@ -395,19 +395,12 @@ def compute_temperature(series, i=-1):
         factors[key] = {"raw": (rets[idx] * 100 if idx < len(rets) and rets[idx] is not None else None),
                         "z": None, "score": s, "note": note}
 
-    # 拥挤: 原始值越大越热(亢奋/踩踏风险)
+    # 拥挤: 原始值越大越热(亢奋/踩踏风险)。
+    # v2.1: ETF份额增速已移出分数(国内资金行为, 定价权原则), 仅作速览展示
     cf = series.get("cftc_net") or []
     s, note = _pct_factor(cf, idx, C.WIN_CFTC, C.MIN_OBS_CFTC)
     factors["cftc_net"] = {"raw": cf[idx] if idx < len(cf) else None, "z": None,
                            "score": s, "note": note}
-
-    sh = series.get("shares_total") or []
-    gr = pct_returns(sh, C.SHARE_GROWTH_DAYS)
-    s, note = _pct_factor(gr, idx, C.WIN_PCTILE, C.MIN_SHARE_OBS)
-    factors["share_growth"] = {"raw": (gr[idx] * 100 if idx < len(gr) and gr[idx] is not None else None),
-                               "z": None, "score": s,
-                               "note": "" if s is not None
-                               else ("份额累积中" if "样本不足" in note else note)}
 
     rv = realized_vol(close, C.RV_WINDOW)
     s, note = _pct_factor(rv, idx, C.WIN_PCTILE, C.MIN_OBS_PCTILE)

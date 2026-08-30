@@ -20,7 +20,7 @@ JSON_PATH = os.path.join(C.WORKSPACE, "黄金市场雷达.json")
 
 # 原始值按百分数格式化的因子(打分层已 ×100)
 PCT_KEYS = {"ret1d_z", "ret5d_z", "etf_turnover", "premium_z", "vol_spike",
-            "ma250_dev", "mom20", "mom60", "mom120", "share_growth",
+            "ma250_dev", "mom20", "mom60", "mom120",
             "rv20_pct", "real_rate", "ath_prox"}
 
 
@@ -154,7 +154,7 @@ KEY_BIAS = {
     "ath_prox": 1,                                           # 逼近新高=强势
     "real_rate": 1, "usd_idx": 1,                            # 机会成本/美元压制弱=利多
     "gold_silver": 1, "gold_oil": 1,                         # 比价低=贵金属端不弱
-    "vix": 1, "breakeven": 1, "share_growth": 1, "cftc_net": 1,
+    "vix": 1, "breakeven": 1, "cftc_net": 1,
     # (避险/抗通胀/申购/投机多头需求; CFTC 拥挤的双面性在框架文档注明)
     "news_heat": 0, "ret1d_z": 0, "ret5d_z": 0, "vol_spike": 0,
     "rv20_pct": -1,                                          # 高波动=追加风险高
@@ -300,6 +300,8 @@ def print_console(rep, debug=False):
     sh = rep.get("shares", {})
     print(f"{_pad('ETF份额库', 10)} {sh.get('days', 0)} 日 (至 {sh.get('last') or '—'})"
           f"   今日写入 {sh.get('written_today', 0)} 条")
+    print(f"{_pad('国内申购热度', 10)} 20日份额增速 {_fmt_pct(m.get('share_20d'), 1)}"
+          f"（仅展示, 不进分数）")
 
     _print_temp_table(temp["factors"], temp["missing"])
     _print_att_table(att["factors"])

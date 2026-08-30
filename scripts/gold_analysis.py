@@ -264,7 +264,8 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
     sh_a = align_series(sh_dates, sh_vals, calendar, ALIGN_TOL["shares"])
 
     # 换手率因子已随"定价权在国内"讨论移出模型(见 gold_config.ATT_WEIGHTS);
-    # etf_turnover 序列不再计算, 份额序列(sh_a)仍供温度分 share_growth 使用
+    # v2.1: 份额增速也移出温度分(国内资金行为不参与定价), sh_a 仅供速览展示
+    # "国内申购热度"(20日增速)与份额库状态
 
     # ---- 4.5 快讯: 抓取+落库(冷启动型, 历史不可回补) + 时序对齐 ----
     n_news, news_rows, news_ok = update_news(today, asof)
@@ -289,6 +290,8 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
               "real_rate": rr_a, "m2": m2_a, "cftc_net": cf_a,
               "shares_total": sh_a, "usd_idx": usd_a, "vix": vix_a,
               "dgs10": dgs_a, "news_count": news_a}
+    # 国内申购热度(仅展示, 不进分数): 主ETF份额 20日净增速%
+    sh_gr = G.pct_returns(sh_a, C.SHARE_GROWTH_DAYS)
     att = G.compute_attention(series, idx)
     temp = G.compute_temperature(series, idx)
 
@@ -314,6 +317,8 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
         "xag_close": xag_a[idx],
         "oil_close": oil_a[idx],
         "gold_oil": gold_oil,
+        "share_20d": (sh_gr[idx] * 100
+                      if idx < len(sh_gr) and sh_gr[idx] is not None else None),
         "usd_idx": usd_a[idx],
         "vix": vix_a[idx],
         "breakeven": be_a[idx],
