@@ -727,11 +727,11 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
   <div class="sub">@NEWS_TAG@ · 情绪为词典标注仅供参考</div>
   <ul class="news">@NEWS_LIS@</ul>
  </div>
- <div class="card">
+ <div class="card" style="grid-column:1/-1">
   <h3>央行购金 · 中国（月度）</h3>
   <div class="sub">SAFE 官方储备 · 月频慢变量，仅展示不进分数 · 上图总储备，下图当月净购金（蓝=增持 / 橙=减持）· 近60个月</div>
   <div id="cbchart" class="chart"></div>
-  <table style="margin-top:10px"><tr><th>指标</th><th>数值</th></tr>
+  <table style="margin-top:10px;max-width:480px"><tr><th>指标</th><th>数值</th></tr>
   @CB_ROWS@</table>
  </div>
 </div>
