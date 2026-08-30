@@ -27,6 +27,7 @@ import csv
 import io
 import json
 import os
+import re
 import time
 from contextlib import contextmanager
 from datetime import date
@@ -379,6 +380,27 @@ def fetch_fred(series_id):
             out_v.append(v)
     order = sorted(range(len(out_d)), key=lambda i: out_d[i])
     return [out_d[i] for i in order], [out_v[i] for i in order]
+
+
+def fetch_cb_gold_cn():
+    """中国央行黄金储备(SAFE国家外汇管理局, 东方财富数据中心)。
+    月频(官方滞后约2-4周)。返回 (['YYYY-MM',...], {'gold_wanoz':[万盎司], 'fx_usd':[亿美元]})"""
+    df = _retry_noproxy(lambda: ak.macro_china_foreign_exchange_gold())
+    if df is None or df.empty:
+        return [], {}
+    raw_d = _col(df, ["统计时间"])
+    g = _col(df, ["黄金储备"])
+    fx = _col(df, ["国家外汇储备"])
+    if raw_d is None or g is None:
+        return [], {}
+    out = []
+    for d, gv, fv in zip(raw_d, g, fx if fx is not None else [None] * len(raw_d)):
+        m = re.match(r"^(\d{4})[.\-/](\d{1,2})$", str(d).strip())
+        if m and _f(gv) is not None:
+            out.append((f"{m.group(1)}-{int(m.group(2)):02d}", _f(gv), _f(fv)))
+    out.sort()
+    return ([o[0] for o in out],
+            {"gold_wanoz": [o[1] for o in out], "fx_usd": [o[2] for o in out]})
 
 
 def fetch_cftc_gold():

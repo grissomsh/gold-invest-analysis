@@ -242,6 +242,32 @@ def diff_series(a, b):
             for k in range(n)]
 
 
+def cb_gold_metrics(dates, gold_wanoz, fx_usd, xau_latest):
+    """中国央行购金展示指标(月度慢变量, 不进分数 — 见 framework §6.12)。
+    dates=['YYYY-MM',...], gold_wanoz=[万盎司], fx_usd=[亿美元], xau_latest=最新伦敦金。
+    返回 {latest_date, tonnes, d12_tonne?, streak, share_pct?}; 无数据 → None。"""
+    n = len(dates)
+    if n == 0 or not gold_wanoz or gold_wanoz[-1] is None:
+        return None
+    tonnes = [w * C.TONNES_PER_WANOZ if w is not None else None for w in gold_wanoz]
+    out = {"latest_date": dates[-1], "tonnes": round(tonnes[-1], 1)}
+    if n >= 13 and tonnes[-13] is not None:
+        out["d12_tonne"] = round(tonnes[-1] - tonnes[-13], 1)
+    streak = 0
+    for k in range(n - 1, 0, -1):
+        if tonnes[k] is None or tonnes[k - 1] is None:
+            break
+        if tonnes[k] > tonnes[k - 1]:
+            streak += 1
+        else:
+            break
+    out["streak"] = streak
+    if fx_usd and fx_usd[-1] and xau_latest:
+        gold_usd = gold_wanoz[-1] * 1e4 * xau_latest      # 万盎司→盎司→USD
+        out["share_pct"] = round(gold_usd / (fx_usd[-1] * 1e8) * 100.0, 2)
+    return out
+
+
 # ------------------------------------------------------------
 # 数据新鲜度(纯日期逻辑, 供 fetch 层调用)
 # ------------------------------------------------------------

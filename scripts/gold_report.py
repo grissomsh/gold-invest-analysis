@@ -344,6 +344,15 @@ def print_console(rep, debug=False):
           f"   今日写入 {sh.get('written_today', 0)} 条")
     print(f"{_pad('国内申购热度', 10)} 20日份额增速 {_fmt_pct(m.get('share_20d'), 1)}"
           f"（仅展示, 不进分数）")
+    cb = rep.get("cb_gold")
+    if cb:
+        d12 = (f"   近12月{cb['d12_tonne']:+.1f}吨" if cb.get("d12_tonne") is not None else "")
+        share = (f"   占外储~{_fmt(cb['share_pct'], 1)}%(按最新金价估算)"
+                 if cb.get("share_pct") is not None else "")
+        print(f"{_pad('央行购金', 10)} 中国 {_fmt(cb['tonnes'], 0)}吨({cb['latest_date']})"
+              f"{d12}   连增{cb['streak']}月{share}")
+    else:
+        print(f"{_pad('央行购金', 10)} SAFE 数据不可得")
 
     _print_temp_table(temp["factors"], temp["missing"])
     _print_att_table(att["factors"])
@@ -441,6 +450,18 @@ def write_html(rep):
         f'<span class="ns">{r["源"]}·{r["情绪"]}</span>{_esc(r["标题"])}</li>'
         for r in (news.get("rows") or [])[:6]) or '<li class="nmuted">近3日无命中</li>'
     bb = lambda items: ("；".join(_esc(i) for i in items) if items else "证据不足")
+    cb = rep.get("cb_gold")
+    if cb:
+        cb_rows = (f"<tr><td>最新储备</td><td><b>{_fmt(cb['tonnes'], 0)} 吨</b>"
+                   f"（{cb['latest_date']}）</td></tr>"
+                   + (f"<tr><td>近12月净增</td><td>{cb['d12_tonne']:+.1f} 吨</td></tr>"
+                      if cb.get("d12_tonne") is not None else "")
+                   + f"<tr><td>连续增持</td><td>{cb['streak']} 个月</td></tr>"
+                   + (f"<tr><td>占外储比重</td><td>≈{_fmt(cb['share_pct'], 1)}%"
+                      "（按最新伦敦金估算）</td></tr>"
+                      if cb.get("share_pct") is not None else ""))
+    else:
+        cb_rows = '<tr><td colspan="2" style="color:var(--muted)">SAFE 数据不可得</td></tr>'
 
     lvl_cls = {"过热": "crit", "偏热": "ser", "中性": "mid",
                "偏冷": "cool", "过冷": "cold", "重要异动": "crit",
@@ -498,6 +519,7 @@ def write_html(rep):
         "@BB_CLS@": {"偏多": "cool", "偏空": "ser"}.get(verdict, "mid"),
         "@BB_BULL@": bb(bull),
         "@BB_BEAR@": bb(bear),
+        "@CB_ROWS@": cb_rows,
         "@NOISE@": _fmt(C.PREMIUM_NOISE, 1),
         "@SCORES_PLACEHOLDER@": "" if len(scores) >= 5 else
         '<div class="ph">分数历史需本地逐日积累（≥5个运行日后可画曲线）</div>',
@@ -703,6 +725,12 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
   <h3>黄金相关快讯（近3日）</h3>
   <div class="sub">@NEWS_TAG@ · 情绪为词典标注仅供参考</div>
   <ul class="news">@NEWS_LIS@</ul>
+ </div>
+ <div class="card">
+  <h3>央行购金 · 中国（月度）</h3>
+  <div class="sub">SAFE 官方储备 · 月频慢变量，仅展示不进分数</div>
+  <table><tr><th>指标</th><th>数值</th></tr>
+  @CB_ROWS@</table>
  </div>
 </div>
 

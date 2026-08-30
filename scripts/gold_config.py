@@ -38,6 +38,8 @@ OIL_SYMBOL = "CL"                 # NYMEX WTI原油, USD/桶(同一外盘接口,
                                   #   FRED DCOILBRENTOU 有反爬, 布伦特'OIL'作备选)
 
 USD_PER_OUNCE = 31.1034768        # 金衡盎司 → 克
+TONNES_PER_WANOZ = 0.311034768    # 万盎司 → 吨 (1万oz × 31.1034768 g = 0.311 t);
+                                  #   SAFE中国央行黄金储备单位为万盎司 (7608万盎司≈2366吨)
 
 FRED_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
 FRED_SERIES = {

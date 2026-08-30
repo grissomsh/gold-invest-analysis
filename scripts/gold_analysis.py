@@ -279,6 +279,15 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
     news_a = align_series(news_d, news_v, calendar, ALIGN_TOL["news"]) \
         if not asof else [None] * len(calendar)
 
+    # ---- 4.6 央行购金(SAFE 月度, 慢变量仅展示不进分数 — framework §6.12) ----
+    cb = None
+    try:
+        cb_d, cb_v = F.fetch_cb_gold_cn()
+        cb = G.cb_gold_metrics(cb_d, cb_v.get("gold_wanoz", []),
+                               cb_v.get("fx_usd", []), xau_a[idx])
+    except Exception as e:                            # noqa: BLE001
+        print(f"   ⚠️ 央行购金(SAFE)拉取失败: {type(e).__name__} {str(e)[:80]}")
+
     # ---- 5. 主价格链与因子计算 ----
     etf_close = align_series(etf_d, etf.get("close", []), calendar, ALIGN_TOL["etf"])
     if st_ok(statuses["sge"]) and sge_a[idx] is not None:
@@ -347,6 +356,7 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
         "sources": statuses,
         "news": {"count_today": n_news, "sources_ok": news_ok,
                  "rows": news_rows[:8] if not asof else []},
+        "cb_gold": cb,
         "shares": {"days": len(sh_dates), "last": sh_dates[-1] if sh_dates else None,
                    "written_today": n_written},
         "_debug": debug,
