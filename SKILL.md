@@ -30,7 +30,7 @@ cd gold-invest-anlaysis && bash setup.sh
 安装完成后（位于 ~/.claude/skills/gold-invest-analysis），重启 Claude Code 即可对话式使用（"黄金现在值得看吗？""黄金市场温度多少？"）；命令行方式：
 
 ```bash
-# 完整分析(约1分钟, 13个数据源); python 路径以 setup.sh 结尾打印的为准
+# 完整分析(约1分钟, 14个数据源); python 路径以 setup.sh 结尾打印的为准
 ~/.claude/skills/gold-invest-analysis/venv/bin/python \
     ~/.claude/skills/gold-invest-analysis/scripts/gold_analysis.py
 ```
