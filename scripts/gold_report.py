@@ -845,11 +845,19 @@ function line(name,data,color,dash){return {name,type:'line',data:data,showSymbo
  lineStyle:{width:2,color:color,type:dash?'dashed':'solid'},itemStyle:{color:color},
  emphasis:{focus:'series'},endLabel:{show:true,formatter:name,fontSize:11,color:INK2}};}
 if(DATA.dates.length){
- mk('price',{tooltip:TIP,legend:{show:false},grid:{left:44,right:70,top:12,bottom:30},
+ mk('price',{tooltip:TIP,grid:{left:44,right:112,top:12,bottom:30},
   xAxis:{type:'category',data:DATA.dates,...AXS,axisLabel:{color:MUTED,fontSize:10}},
   yAxis:{type:'value',scale:true,...AXS},
-  series:[line('上海金',DATA.sge100,C1),line('伦敦金',DATA.xau100,C2),
-          line('黄金ETF',DATA.etf100,C3),line('250日均线',DATA.ma250,MUTED,true)]});}
+  legend:{orient:'vertical',right:6,top:16,itemWidth:12,itemHeight:8,
+   textStyle:{color:INK2,fontSize:11},data:['上海金','伦敦金','黄金ETF','250日均线']},
+  series:[{name:'上海金',type:'line',data:DATA.sge100,showSymbol:false,
+    lineStyle:{width:2,color:C1},itemStyle:{color:C1},emphasis:{focus:'series'}},
+   {name:'伦敦金',type:'line',data:DATA.xau100,showSymbol:false,
+    lineStyle:{width:2,color:C2},itemStyle:{color:C2},emphasis:{focus:'series'}},
+   {name:'黄金ETF',type:'line',data:DATA.etf100,showSymbol:false,
+    lineStyle:{width:2,color:C3},itemStyle:{color:C3},emphasis:{focus:'series'}},
+   {name:'250日均线',type:'line',data:DATA.ma250,showSymbol:false,
+    lineStyle:{width:2,color:MUTED,type:'dashed'},itemStyle:{color:MUTED},emphasis:{focus:'series'}}]});}
 
 /* 分数历史 */
 if(DATA.scores.length>=5){
