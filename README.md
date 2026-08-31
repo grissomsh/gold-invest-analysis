@@ -1,6 +1,6 @@
 # 黄金市场雷达 (gold-invest-analysis)
 
-一个**确定性的黄金市场状态监控系统**：每天自动拉取 13 个免 key 数据源，输出两个 0–100 的分数，回答两个问题——
+一个**确定性的黄金市场状态监控系统**：每天自动拉取 14 个免 key 数据源，输出两个 0–100 的分数，回答两个问题——
 
 |      | 关注分 (Attention)               | 温度分 (Temperature)                   |
 | ---- | -------------------------------- | -------------------------------------- |
@@ -19,7 +19,7 @@
 
 ## 数据源（全部免 key、无 cookie）
 
-akshare：上海金 Au99.99、伦敦金/银、WTI 原油、黄金 ETF 518880、ETF 份额（沪深）、国债收益率、快讯三源（新浪全球快讯/财联社/上海金属网）｜FRED：实际利率 DFII10、美国 M2、USDCNY、美元指数 DTWEXBGS、VIX、美债 10Y｜CFTC Socrata API：非商业净持仓周报。
+akshare：上海金 Au99.99、伦敦金/银、WTI 原油、黄金 ETF 518880、ETF 份额（沪深）、国债收益率、快讯三源（新浪全球快讯/财联社/上海金属网）、中国央行黄金储备（SAFE）｜FRED：实际利率 DFII10、美国 M2、USDCNY、美元指数 DTWEXBGS、VIX、美债 10Y｜CFTC Socrata API：非商业净持仓周报｜WGC Goldhub 各国央行购金（手动导入，见下）。
 
 ## 快速开始
 
@@ -31,10 +31,12 @@ cd gold-invest-analysis && bash setup.sh
 安装脚本会创建 venv 并把 skill 装到 `~/.claude/skills/gold-invest-analysis/`，重启 Claude Code 即可对话式使用（"黄金现在值得看吗？"）。
 
 ```bash
-# 完整分析(约1分钟, 13个数据源)
+# 完整分析(约1分钟, 14个数据源)
 ~/.claude/skills/gold-invest-analysis/venv/bin/python \
     ~/.claude/skills/gold-invest-analysis/scripts/gold_analysis.py
 ```
+
+报告附**央行购金区块**：中国（SAFE 自动拉取，含储备吨/近12月净增/连增月数/占外储 + 月度折线图）与全球各国（需手动导入——gold.org 免费注册后下载 `Changes_latest_*.xlsx` 与 `World_official_gold_holdings_*.xlsx`，放入 `workspace/data/`，即显示全球净购金/增减持 TOP/持仓 TOP10）。
 
 ### 子命令
 
@@ -49,12 +51,13 @@ cd gold-invest-analysis && bash setup.sh
 
 ## 输出
 
-控制台双分数表 + 一句话结论 + 快讯列表 + 多空速览，`workspace/` 下生成 HTML 报告（ECharts 图表：价格 rebase、分数历史、因子贡献、国内溢价）、JSON、SQLite 逐日积累（份额/快讯条数/分数历史/推送去重）。`--backtest` 另产出分档前向收益统计与 Spearman 秩 IC（首个基线：温度分 20 日 IC = −0.137，温度越高未来收益越低，与"过热只减不加"语义一致）。
+控制台双分数表 + 一句话结论 + 快讯列表 + 多空速览 + 央行购金，`workspace/` 下生成 HTML 报告（ECharts 图表：价格 rebase、分数历史、因子贡献、国内溢价、央行购金中国月度双图 + 全球各国净购金 TOP）、JSON、SQLite 逐日积累（份额/快讯条数/分数历史/推送去重）。`--backtest` 另产出分档前向收益统计与 Spearman 秩 IC（首个基线：温度分 20 日 IC = −0.137，温度越高未来收益越低，与"过热只减不加"语义一致）。
 
 ## 文档
 
 - [SKILL.md](SKILL.md) — 使用说明 / 模型一页纸 / 数据源 / 故障排查
-- [references/gold_framework.md](references/gold_framework.md) — 方法论、因子口径、回测基线、口径坑与 v2 借鉴别鉴
+- [references/gold_framework.md](references/gold_framework.md) — 方法论、因子口径、回测基线、口径坑与借鉴别鉴
+- [CLAUDE.md](CLAUDE.md) — 给 Claude Code 改代码时的架构与纪律手册
 
 ## 免责声明
 
