@@ -653,7 +653,7 @@ h1{font-size:20px;margin:0}
 .card h3{margin:0 0 6px;font-size:14px;font-weight:600}
 .card .sub{font-size:12px;color:var(--muted);margin-bottom:4px}
 .chart{width:100%;height:300px}
-.chart.tall{height:340px}.chart.sq{height:260px}
+.chart.wide{height:420px}.chart.tall{height:340px}.chart.sq{height:260px}
 .mkt{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
 .mkt .cell{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
 .mkt .k{font-size:12px;color:var(--muted)}
@@ -722,19 +722,19 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
 </div>
 
 <div class="grid2">
- <div class="card" style="margin-top:0">
+ <div class="card" style="grid-column:1/-1">
   <h3>价格 · 期初=100</h3>
   <div class="legend"><span><i style="background:var(--c1)"></i>上海金</span>
    <span><i style="background:var(--c2)"></i>伦敦金</span>
    <span><i style="background:var(--c3)"></i>黄金ETF</span>
    <span><i style="background:var(--muted)"></i>250日均线</span></div>
-  <div id="price" class="chart tall"></div>
+  <div id="price" class="chart wide"></div>
  </div>
- <div class="card" style="margin-top:0">
+ <div class="card" style="grid-column:1/-1">
   <h3>分数历史</h3>
   <div class="legend"><span><i style="background:var(--c1)"></i>关注分</span>
    <span><i style="background:var(--c2)"></i>温度分</span></div>
-  <div id="scores" class="chart tall"></div>@SCORES_PLACEHOLDER@
+  <div id="scores" class="chart wide"></div>@SCORES_PLACEHOLDER@
  </div>
  <div class="card">
   <h3>关注分因子（异动贡献）</h3>
