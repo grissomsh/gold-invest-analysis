@@ -191,19 +191,6 @@ FACTOR_TIPS = {
 }
 
 
-def _glossary_html(keys):
-    """因子口径速查表(折叠块)。"""
-    rows = "".join(
-        f"<tr><td>{_esc(C.FACTOR_META[k]['名'])}</td>"
-        f"<td>{_esc(C.FACTOR_META[k]['方向'])}</td>"
-        f"<td>{_esc(C.FACTOR_META[k]['窗'])}</td>"
-        f"<td>{_esc(FACTOR_TIPS.get(k, ''))}</td></tr>"
-        for k in keys)
-    return ('<details class="gloss"><summary>因子口径速查（点击展开）</summary>'
-            "<table><tr><th>因子</th><th>方向</th><th>窗口</th><th>口径与高分解读</th></tr>"
-            f"{rows}</table></details>")
-
-
 def bull_bear(rep):
     """多空速览: (结论三态, 偏多证据[:3], 偏空证据[:3])。
     每条证据带原始值与分数; 双侧证据数差≥2 且≥2条才给方向, 否则判拉锯
@@ -434,9 +421,10 @@ def _esc(s):
 
 
 def _rows_html(rows, kind):
-    """因子表 HTML 行"""
+    """因子表 HTML 行(末列=口径/解读, 与悬停 tooltip 同源 FACTOR_TIPS)"""
     out = []
     for r in rows:
+        tip = _esc(FACTOR_TIPS.get(r["key"], ""))
         if kind == "temp":
             cells = [r["组"] or "—", _esc(r["名"]), _raw(r["key"], r["raw"]),
                      _fmt(r["score"], 1), f"{r['weight']}%", r["方向"], r["窗"]]
@@ -445,7 +433,7 @@ def _rows_html(rows, kind):
             cells = [_esc(r["名"]), _raw(r["key"], r["raw"]), z,
                      _fmt(r["score"], 1), f"{r['weight']}%", r["窗"]]
         cls = ' class="miss"' if r["score"] is None else ""
-        tds = "".join(f"<td>{c}</td>" for c in cells)
+        tds = "".join(f"<td>{c}</td>" for c in cells) + f'<td class="tip">{tip}</td>'
         out.append(f"<tr{cls}>{tds}</tr>")
     return "\n".join(out)
 
@@ -588,8 +576,6 @@ def write_html(rep):
         "@NOISE@": _fmt(C.PREMIUM_NOISE, 1),
         "@SCORES_PLACEHOLDER@": "" if len(scores) >= 5 else
         '<div class="ph">分数历史需本地逐日积累（≥5个运行日后可画曲线）</div>',
-        "@ATT_GLOSS@": _glossary_html([f["key"] for f in att["factors"]]),
-        "@TEMP_GLOSS@": _glossary_html([f["key"] for f in temp["factors"]]),
         "@ATT_DATA@": json.dumps(
             [[f["名"], f["score"], FACTOR_TIPS.get(f["key"], ""),
               _raw(f["key"], f["raw"]), f"{f['weight']}%"] for f in att["factors"]],
@@ -687,10 +673,7 @@ ul.news li:last-child{border-bottom:none}
 ul.news .nt{color:var(--muted);font-size:12px;margin-right:8px;font-variant-numeric:tabular-nums}
 ul.news .ns{display:inline-block;color:var(--ink2);font-size:12px;margin-right:8px}
 ul.news .nmuted{color:var(--muted)}
-details.gloss{margin-top:10px;font-size:12.5px}
-details.gloss summary{cursor:pointer;color:var(--ink2);user-select:none}
-details.gloss table{margin-top:6px}
-details.gloss td{line-height:1.55;vertical-align:top}
+td.tip{font-size:11.5px;color:var(--ink2);line-height:1.6;min-width:200px}
 .howto{font-size:12px;color:var(--ink2);margin:2px 0 6px;line-height:1.6}
 .ph{color:var(--muted);font-size:13px;padding:24px 0;text-align:center}
 footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
@@ -755,27 +738,25 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
  </div>
  <div class="card">
   <h3>关注分因子（异动贡献）</h3>
-  <div class="howto">悬停因子条查看口径与解读。分数=该项异动的罕见度，越高说明"今天越有事"；缺失表示数据未积累或源不可得（权重自动摊给其余因子）。</div>
+  <div class="howto">悬停因子条（或见下方构成表"口径/解读"列）查看口径。分数=该项异动的罕见度，越高说明"今天越有事"；缺失表示数据未积累或源不可得（权重自动摊给其余因子）。</div>
   <div id="attbars" class="chart sq"></div>
-  @ATT_GLOSS@
  </div>
  <div class="card">
   <h3>温度分因子（按组别着色）</h3>
-  <div class="howto">悬停因子条查看口径与解读。条长=该维度在自身历史中的"热"位置；冷方向因子（金银比/金油比/实际利率/美元）分数高 = 压制项处于低位，同样是"热"的证据。组别：<span style="color:var(--c1)">估值蓝</span> / <span style="color:var(--c2)">趋势橙</span> / <span style="color:var(--c3)">拥挤青</span> / <span style="color:var(--muted)">宏观灰</span>。</div>
+  <div class="howto">悬停因子条（或见下方构成表"口径/解读"列）查看口径。条长=该维度在自身历史中的"热"位置；冷方向因子（金银比/金油比/实际利率/美元）分数高 = 压制项处于低位，同样是"热"的证据。组别：<span style="color:var(--c1)">估值蓝</span> / <span style="color:var(--c2)">趋势橙</span> / <span style="color:var(--c3)">拥挤青</span> / <span style="color:var(--muted)">宏观灰</span>。</div>
   <div id="tempbars" class="chart sq"></div>
-  @TEMP_GLOSS@
  </div>
 </div>
 
 <div class="grid2">
  <div class="card">
   <h3>关注分构成</h3>
-  <table><tr><th>因子</th><th>原始值</th><th>z</th><th>分数</th><th>权重</th><th>窗口</th></tr>
+  <table><tr><th>因子</th><th>原始值</th><th>z</th><th>分数</th><th>权重</th><th>窗口</th><th>口径/解读</th></tr>
   @ATT_ROWS@</table>
  </div>
  <div class="card">
   <h3>温度分构成 @TEMP_MISSING@</h3>
-  <table><tr><th>组别</th><th>因子</th><th>原始值</th><th>分数</th><th>权重</th><th>方向</th><th>窗口</th></tr>
+  <table><tr><th>组别</th><th>因子</th><th>原始值</th><th>分数</th><th>权重</th><th>方向</th><th>窗口</th><th>口径/解读</th></tr>
   @TEMP_ROWS@</table>
  </div>
 </div>
