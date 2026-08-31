@@ -20,6 +20,7 @@
 
 import argparse
 import json
+import os
 import sys
 from datetime import date, datetime, timedelta
 
@@ -279,8 +280,8 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
     news_a = align_series(news_d, news_v, calendar, ALIGN_TOL["news"]) \
         if not asof else [None] * len(calendar)
 
-    # ---- 4.6 央行购金(SAFE 月度, 慢变量仅展示不进分数 — framework §6.12) ----
-    cb, cb_chart = None, {}
+    # ---- 4.6 央行购金(SAFE 月度 + WGC Goldhub 各国文件导入; 慢变量仅展示不进分数) ----
+    cb, cb_chart, cbf = None, {}, None
     try:
         cb_d, cb_v = F.fetch_cb_gold_cn()
         cb = G.cb_gold_metrics(cb_d, cb_v.get("gold_wanoz", []),
@@ -298,6 +299,27 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
             }
     except Exception as e:                            # noqa: BLE001
         print(f"   ⚠️ 央行购金(SAFE)拉取失败: {type(e).__name__} {str(e)[:80]}")
+    try:
+        import gold_cbfile as CBF
+        cf_path = CBF.find_changes_file()
+        if cf_path:
+            ch = CBF.parse_changes(cf_path)
+            m12 = CBF.window_metrics(ch) if ch else None
+            holders = CBF.parse_holdings(CBF.find_holdings_file()) \
+                if CBF.find_holdings_file() else None
+            if m12:
+                by = m12["by"]
+                cbf = {
+                    "window": [m12["from"], m12["to"]],
+                    "world_12m": m12["world"],
+                    "top_buy": sorted(by.items(), key=lambda x: -x[1])[:5],
+                    "top_sell": sorted(by.items(), key=lambda x: x[1])[:5],
+                    "holders": (holders["rows"][:10] if holders else []),
+                    "holders_asof": holders["asof_max"] if holders else None,
+                    "changes_file": os.path.basename(cf_path),
+                }
+    except Exception as e:                            # noqa: BLE001
+        print(f"   ⚠️ 央行购金(WGC文件)解析失败: {type(e).__name__} {str(e)[:80]}")
 
     # ---- 5. 主价格链与因子计算 ----
     etf_close = align_series(etf_d, etf.get("close", []), calendar, ALIGN_TOL["etf"])
@@ -367,7 +389,7 @@ def run(make_html=True, json_only=False, debug=False, asof=None,
         "sources": statuses,
         "news": {"count_today": n_news, "sources_ok": news_ok,
                  "rows": news_rows[:8] if not asof else []},
-        "cb_gold": cb,
+        "cb_gold": {"cn": cb, "global": cbf},
         "shares": {"days": len(sh_dates), "last": sh_dates[-1] if sh_dates else None,
                    "written_today": n_written},
         "_debug": debug,

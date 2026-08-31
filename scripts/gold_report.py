@@ -284,6 +284,35 @@ def _print_att_table(rows):
         print(" ".join(_pad(c, x) for c, x in zip(cells, w)))
 
 
+# WGC/IMF 国名 → 中文速记(未收录时用逗号前段)
+NAME_CN = {
+    "Poland, Republic of": "波兰", "Uzbekistan, Republic of": "乌兹别克",
+    "Kazakhstan, Republic of": "哈萨克", "China, People's Republic of": "中国",
+    "Euro Area (EA)": "欧元区", "Turkey": "土耳其", "Russian Federation": "俄罗斯",
+    "India": "印度", "United States": "美国", "Germany": "德国", "Italy": "意大利",
+    "France": "法国", "Japan": "日本", "Switzerland": "瑞士",
+    "Netherlands, The": "荷兰", "Ghana": "加纳", "IMF": "IMF",
+    "United Kingdom": "英国", "Spain": "西班牙", "Austria": "奥地利",
+    "Belgium": "比利时", "Saudi Arabia, Kingdom of": "沙特",
+    "Czech Republic": "捷克", "Thailand": "泰国", "Singapore": "新加坡",
+    "Qatar": "卡塔尔", "Iraq": "伊拉克", "Poland": "波兰",
+    "Hungary": "匈牙利", "Egypt, Arab Rep. of": "埃及", "Philippines": "菲律宾",
+    "Indonesia": "印尼", "Malaysia": "马来西亚", "Vietnam": "越南",
+    "Brazil": "巴西", "Mexico": "墨西哥", "Canada": "加拿大",
+    "Australia": "澳大利亚", "Korea, Republic of": "韩国",
+    "China, P.R.: Mainland": "中国", "China, P.R.: Hong Kong": "中国香港",
+    "Bulgaria": "保加利亚", "Romania": "罗马尼亚", "Jordan": "约旦",
+    "Kyrgyz Republic": "吉尔吉斯", "Tajikistan, Rep. of": "塔吉克",
+    "Azerbaijan, Rep. of": "阿塞拜疆", "Belarus, Rep. of": "白俄罗斯",
+    "Serbia, Rep. of": "塞尔维亚", "Colombia": "哥伦比亚", "Morocco": "摩洛哥",
+    "State Oil Fund of the Republic of Azerbaijan (SOFAZ)": "阿塞拜疆SOFAZ",
+}
+
+
+def _cn_name(name):
+    return NAME_CN.get(name, str(name).split(",")[0])
+
+
 def _print_news(news):
     rows = news.get("rows") or []
     print("\n----- 黄金相关快讯(近3日, 情绪为词典标注仅供参考) -----")
@@ -344,7 +373,8 @@ def print_console(rep, debug=False):
           f"   今日写入 {sh.get('written_today', 0)} 条")
     print(f"{_pad('国内申购热度', 10)} 20日份额增速 {_fmt_pct(m.get('share_20d'), 1)}"
           f"（仅展示, 不进分数）")
-    cb = rep.get("cb_gold")
+    cbg = rep.get("cb_gold", {})
+    cb = cbg.get("cn")
     if cb:
         d12 = (f"   近12月{cb['d12_tonne']:+.1f}吨" if cb.get("d12_tonne") is not None else "")
         share = (f"   占外储~{_fmt(cb['share_pct'], 1)}%(按最新金价估算)"
@@ -353,6 +383,17 @@ def print_console(rep, debug=False):
               f"{d12}   连增{cb['streak']}月{share}")
     else:
         print(f"{_pad('央行购金', 10)} SAFE 数据不可得")
+    gl = cbg.get("global")
+    if gl:
+        fmt5 = lambda xs: " ".join(f"{_cn_name(n)}{v:+.0f}" for n, v in xs[:4])
+        print(f"{_pad('各国央行12M', 10)} 全球{gl['world_12m']:+.0f}吨"
+              f"({gl['window'][0]}~{gl['window'][1]})   "
+              f"增:{fmt5(gl['top_buy'])}   减:{fmt5(gl['top_sell'])}")
+        if gl.get("holders"):
+            h5 = gl["holders"][:5]
+            print(f"{_pad('持仓TOP5', 10)} "
+                  + " ".join(f"{_cn_name(n)}{t:.0f}" for _r, n, t, _p in h5)
+                  + f"   (WGC文件, 至 {gl.get('holders_asof') or '—'})")
 
     _print_temp_table(temp["factors"], temp["missing"])
     _print_att_table(att["factors"])
@@ -450,7 +491,9 @@ def write_html(rep):
         f'<span class="ns">{r["源"]}·{r["情绪"]}</span>{_esc(r["标题"])}</li>'
         for r in (news.get("rows") or [])[:6]) or '<li class="nmuted">近3日无命中</li>'
     bb = lambda items: ("；".join(_esc(i) for i in items) if items else "证据不足")
-    cb = rep.get("cb_gold")
+    cbg = rep.get("cb_gold", {})
+    cb = cbg.get("cn")
+    gl = cbg.get("global")
     if cb:
         cb_rows = (f"<tr><td>最新储备</td><td><b>{_fmt(cb['tonnes'], 0)} 吨</b>"
                    f"（{cb['latest_date']}）</td></tr>"
@@ -462,6 +505,25 @@ def write_html(rep):
                       if cb.get("share_pct") is not None else ""))
     else:
         cb_rows = '<tr><td colspan="2" style="color:var(--muted)">SAFE 数据不可得</td></tr>'
+    if gl:
+        cb_glob = (f"全球央行近12月净购金 <b>{gl['world_12m']:+.0f} 吨</b>"
+                   f"（{gl['window'][0]} ~ {gl['window'][1]}，IMF/WGC 口径）"
+                   f'<span style="color:var(--muted)"> · 源: {gl["changes_file"]}</span>')
+        wb = sorted(gl["top_buy"] + gl["top_sell"], key=lambda x: -abs(x[1]))[:10]
+        world_rows = "".join(
+            f"<tr><td>{_esc(_cn_name(n))}</td>"
+            f'<td style="text-align:right;color:{"var(--c1)" if v >= 0 else "var(--c2)"}">'
+            f"{v:+.1f}</td></tr>" for n, v in wb)
+    else:
+        cb_glob = ('<span style="color:var(--muted)">WGC 文件未导入 — 将 Goldhub 下载的'
+                   ' Changes_latest_*.xlsx / World_official_gold_holdings_*.xlsx 放入 '
+                   'workspace/data/ 即显示各国榜</span>')
+        world_rows = ""
+    holder_rows = "".join(
+        f"<tr><td>{r}</td><td>{_esc(_cn_name(n))}</td>"
+        f'<td style="text-align:right">{t:,.0f}</td>'
+        f'<td style="text-align:right">{_fmt(p, 1) if p is not None else "—"}</td></tr>'
+        for r, n, t, p in (gl.get("holders") or [])[:10]) if gl else ""
 
     lvl_cls = {"过热": "crit", "偏热": "ser", "中性": "mid",
                "偏冷": "cool", "过冷": "cold", "重要异动": "crit",
@@ -520,6 +582,9 @@ def write_html(rep):
         "@BB_BULL@": bb(bull),
         "@BB_BEAR@": bb(bear),
         "@CB_ROWS@": cb_rows,
+        "@CB_GLOB@": cb_glob,
+        "@CB_WORLD_ROWS@": world_rows,
+        "@CB_HOLDER_ROWS@": holder_rows,
         "@NOISE@": _fmt(C.PREMIUM_NOISE, 1),
         "@SCORES_PLACEHOLDER@": "" if len(scores) >= 5 else
         '<div class="ph">分数历史需本地逐日积累（≥5个运行日后可画曲线）</div>',
@@ -539,6 +604,12 @@ def write_html(rep):
     html = _HTML_TEMPLATE
     for k, v in tokens.items():
         html = html.replace(k, v)
+    if gl:
+        wb10 = sorted(gl["top_buy"] + gl["top_sell"], key=lambda x: -abs(x[1]))[:10]
+        cbworld = {"names": [_cn_name(n) for n, _v in wb10],
+                   "vals": [v for _n, v in wb10]}
+    else:
+        cbworld = {"names": [], "vals": []}
     payload = json.dumps({
         "dates": chart.get("dates") or [],
         "sge100": chart.get("sge100") or [],
@@ -548,6 +619,7 @@ def write_html(rep):
         "premium": chart.get("premium") or [],
         "premium_noise": C.PREMIUM_NOISE,
         "cb": chart.get("cb") or {},
+        "cbworld": cbworld,
         "scores": [[r[0], r[1], r[2]] for r in scores],
     }, ensure_ascii=False).replace("</", "<\\/")
     html = html.replace("@CHART_DATA@", payload)
@@ -734,6 +806,23 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
   <table style="margin-top:10px;max-width:480px"><tr><th>指标</th><th>数值</th></tr>
   @CB_ROWS@</table>
  </div>
+ <div class="card" style="grid-column:1/-1">
+  <h3>央行购金 · 全球各国</h3>
+  <div class="sub">@CB_GLOB@</div>
+  <div class="grid2" style="margin-top:6px">
+   <div>
+    <div class="howto">近12月净购金 TOP（正=增持蓝 / 负=减持橙，吨）</div>
+    <div id="cbworld" class="chart sq"></div>
+   </div>
+   <div>
+    <div class="howto">官方黄金持仓 TOP10（吨 / 占外储比重，WGC Goldhub 文件）</div>
+    <table><tr><th>#</th><th>国家</th><th style="text-align:right">持仓(吨)</th><th style="text-align:right">占外储</th></tr>
+    @CB_HOLDER_ROWS@</table>
+   </div>
+  </div>
+  <table style="margin-top:8px;max-width:520px"><tr><th>近12月变化榜</th><th style="text-align:right">净购金(吨)</th></tr>
+  @CB_WORLD_ROWS@</table>
+ </div>
 </div>
 
 <div class="card">
@@ -856,6 +945,19 @@ if(CB.dates && CB.dates.length>=3){
     markLine:{silent:true,symbol:'none',lineStyle:{type:'dashed',color:BASE},
      label:{show:false},data:[{yAxis:0}]}}]});
 }
+
+/* 各国近12月净购金 TOP10: 横向条形, 蓝=增持/橙=减持 */
+const CW=DATA.cbworld||{names:[],vals:[]};
+if(CW.names.length){
+ mk('cbworld',{tooltip:{...TIPX,formatter:p=>`${CW.names[p.dataIndex]} 近12月净购金 <b>${CW.vals[p.dataIndex]:+.1f}</b> 吨`},
+  grid:{left:76,right:44,top:8,bottom:8},
+  xAxis:{type:'value',...AXS,splitLine:{show:false}},
+  yAxis:{type:'category',inverse:true,data:CW.names,
+   axisLine:{lineStyle:{color:BASE}},axisTick:{show:false},axisLabel:{color:INK2,fontSize:11}},
+  series:[{type:'bar',barWidth:12,data:CW.vals.map(v=>({value:v,
+   itemStyle:{color:v>=0?C1:C2,borderRadius:v>=0?[0,3,3,0]:[3,0,0,3]}})),
+   label:{show:true,position:'right',fontSize:11,color:INK2,
+    formatter:p=>(p.value>0?'+':'')+p.value.toFixed(0)}}]});}
 
 /* 国内溢价: 零轴基线 + 噪声带 */
 if(DATA.premium.length){

@@ -1,6 +1,6 @@
 ---
 name: gold-invest-analysis
-description: 黄金市场雷达 — 双分数量化监控系统。关注分(0-100, 异动驱动: 单日收益z 30% + 5日收益z 25% + 波动率突升 20% + 快讯热度 15% + 距历史新高 10%)回答"今天要不要去关注黄金市场"；温度分(0-100, 位置驱动, 四组制: 估值[金/M2、金银比、金油比、实际利率]30% + 趋势[均线偏离、动量分位]30% + 拥挤[CFTC净多、波动率]15% + 宏观[美元指数、VIX、通胀预期]25%)判断市场处于过热/偏热/中性/偏冷/过冷。定价权在伦敦/纽约，国内行为指标(换手率/国内溢价/ETF份额增速)不进分数，仅在速览作展示；央行购金(中国SAFE月度)作为慢变量区块展示。数据全自动免key：akshare(上海金/伦敦金/WTI/518880/国债/快讯三源/SAFE央行储备)+FRED(实际利率/M2/USDCNY/美元指数/VIX/美债10Y)+CFTC官方API，输出控制台表格+HTML报告+JSON+SQLite历史积累，附 --backtest 分数校准回测与 --alert 推送提醒(Server酱/PushPlus/Bark)。当用户想知道"现在黄金市场是否值得关注/要不要看一眼金价"、查询黄金市场热度/温度/拥挤度、中国央行购金/黄金储备、或讨论黄金分数模型权重阈值时使用。
+description: 黄金市场雷达 — 双分数量化监控系统。关注分(0-100, 异动驱动: 单日收益z 30% + 5日收益z 25% + 波动率突升 20% + 快讯热度 15% + 距历史新高 10%)回答"今天要不要去关注黄金市场"；温度分(0-100, 位置驱动, 四组制: 估值[金/M2、金银比、金油比、实际利率]30% + 趋势[均线偏离、动量分位]30% + 拥挤[CFTC净多、波动率]15% + 宏观[美元指数、VIX、通胀预期]25%)判断市场处于过热/偏热/中性/偏冷/过冷。定价权在伦敦/纽约，国内行为指标(换手率/国内溢价/ETF份额增速)不进分数，仅在速览作展示；央行购金作为慢变量区块展示(中国SAFE自动拉取+各国WGC Goldhub文件导入)。数据全自动免key：akshare(上海金/伦敦金/WTI/518880/国债/快讯三源/SAFE央行储备)+FRED(实际利率/M2/USDCNY/美元指数/VIX/美债10Y)+CFTC官方API，输出控制台表格+HTML报告+JSON+SQLite历史积累，附 --backtest 分数校准回测与 --alert 推送提醒(Server酱/PushPlus/Bark)。当用户想知道"现在黄金市场是否值得关注/要不要看一眼金价"、查询黄金市场热度/温度/拥挤度、中国或各国央行购金/黄金储备、或讨论黄金分数模型权重阈值时使用。
 ---
 
 # gold-invest-analysis — 黄金市场雷达
@@ -13,6 +13,7 @@ description: 黄金市场雷达 — 双分数量化监控系统。关注分(0-10
 - **`scripts/gold_fetch.py`** — 数据获取层（全 skill 唯一 import akshare 的文件）
 - **`scripts/gold_backtest.py`** — `--backtest` 校准回测（分数→未来收益, 纯标准库）
 - **`scripts/gold_alert.py`** — `--alert` 阈值推送（Server酱/PushPlus/Bark）
+- **`scripts/gold_cbfile.py`** — WGC Goldhub 各国央行购金文件解析（手动导入, 纯标准库）
 - **`scripts/gold_data_store.py`** — SQLite 积累（ETF份额/快讯条数/价格快照/分数历史/推送去重）
 - **`tests/test_gold_scoring.py`** — 打分模型离线回归（零依赖, 系统 python3 可跑）
 - **`references/gold_framework.md`** — 方法论与口径坑（先读这个再动模型常量）
@@ -95,7 +96,7 @@ cd gold-invest-anlaysis && bash setup.sh
 
 温度分是**状态描述，不是买卖建议**；档位动作文案按近期方向自动修正（急跌≤−2%不谈止盈，急涨≥+2%才谈计划性减仓；伦敦金|单日|≥2%时国内溢价因子按时差失真剔除）。报告附**多空速览卡**（因子高分方向解读, 展示非预测）。全部权重、窗口、阈值、分档集中在 `scripts/gold_config.py`；方法论依据与口径坑见 `references/gold_framework.md`。
 
-**改模型常量的纪律**：现行权重为理论结构+经验设定；`--backtest` 提供分数信息量对照基线。调整任何权重/阈值前先读 framework 文档 §5.5–§7，改动后必须重跑 `tests/test_gold_scoring.py`（127 项断言）。
+**改模型常量的纪律**：现行权重为理论结构+经验设定；`--backtest` 提供分数信息量对照基线。调整任何权重/阈值前先读 framework 文档 §5.5–§7，改动后必须重跑 `tests/test_gold_scoring.py`（133 项断言）。
 
 ---
 
@@ -114,6 +115,7 @@ cd gold-invest-anlaysis && bash setup.sh
 | CFTC非商业净持仓       | CFTC Socrata API `6dca-aqww`(免key)                                               | 周报, net=long−short, 全历史                               |
 | 黄金相关快讯           | akshare `stock_info_global_sina` / `stock_info_global_cls` / `futures_news_shmet` | 三源合并, 免cookie; 只回最新若干条, 条数逐日积累(不可回补) |
 | 央行购金(中国)         | akshare `macro_china_foreign_exchange_gold` (SAFE)                                | 月频, 滞后约2-4周; 慢变量仅展示(储备吨/近12月净增/连增月数/占外储), 不进分数 |
+| 央行购金(各国)         | WGC Goldhub 文件手动导入（gold.org 免费注册下载）                                  | 放入 `workspace/data/`：`Changes_latest_*.xlsx`(各国月度净购金) + `World_official_gold_holdings_*.xlsx`(持仓榜); 展示全球净购金/增减持TOP/持仓榜, 不进分数 |
 
 ---
 
@@ -127,6 +129,7 @@ python3 scripts/gold_analysis.py --healthcheck   # 逐源诊断, 失败退出码
 - **份额增速不显示在温度因子表** → v2.1 起定价权一致性：ETF 份额增速（国内资金行为）移出分数，仅速览展示"国内申购热度"；份额仍需 `--backfill-shares 60` 回补以显示 20 日增速。
 - **快讯热度分位缺失("快讯积累中")** → 快讯条数需本地逐日积累约 3–4 周（三源只回最新若干条，历史无法回补，无回补参数）；期间因子缺失并权重重归一。
 - **美元指数分位多日不变** → DTWEXBGS 为周频发布（值标注周截止），一周内分位不变属正常，不是数据卡死。
+- **"各国央行"榜没显示** → 需要手动导入 WGC Goldhub 文件：gold.org 免费注册后下载数据集，把 `Changes_latest_*.xlsx` 和 `World_official_gold_holdings_*.xlsx` 放进 `workspace/data/`（安装版即 `~/.claude/skills/gold-invest-analysis/workspace/data/`）；IMF/WGC 的公开自动化接口已全部失效（framework §6.12 记录了验证过程），手动导入是唯一稳定来源。
 - **--alert 提示"未配置推送通道"** → 需设环境变量至少其一：`GOLD_SC_SENDKEY` (Server酱) / `GOLD_PUSHPLUS_TOKEN` (PushPlus) / `GOLD_BARK_URL` (Bark)。首日运行无历史基线不触发档位规则；同一规则当日只推一次。
 - **--backtest 慢** → 约 1 分钟（逐历史日重算双分数, 纯 Python），属预期；回放中快讯/份额因子缺失并重归一，覆盖度低于实盘是正常现象。
 - **温度分/关注分只剩部分子分** → 对应数据源当日不可得或陈旧（见 sources 表），模型自动降级并权重归一，覆盖度 <50% 时不出分。

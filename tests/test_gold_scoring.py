@@ -484,6 +484,92 @@ cb2 = G.cb_gold_metrics(_d, _w2, [34000.0] * 20, 4400.0)
 check("央行: 末月减持→连增归零", cb2["streak"] == 0, cb2["streak"])
 
 # ------------------------------------------------------------
+# 16. WGC 文件导入解析(合成最小xlsx, 纯标准库写zip)
+# ------------------------------------------------------------
+import zipfile as _zf                                  # noqa: E402
+
+
+def _mkxlsx(path, sheets):
+    with _zf.ZipFile(path, "w") as zf:
+        zf.writestr("[Content_Types].xml",
+                    '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                    '<Default Extension="xml" ContentType="application/xml"/></Types>')
+        zf.writestr("_rels/.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+        names = "".join(f'<sheet name="{n}" sheetId="{i + 1}" r:id="rId{i + 1}"/>'
+                        for i, n in enumerate(sheets))
+        zf.writestr("xl/workbook.xml",
+                    '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+                    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                    f'<sheets>{names}</sheets></workbook>')
+        rr = "".join(f'<Relationship Id="rId{i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
+                     f'Target="worksheets/{f}"/>' for i, (n, (f, _x)) in enumerate(sheets.items()))
+        zf.writestr("xl/_rels/workbook.xml.rels",
+                    '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                    f'{rr}</Relationships>')
+        for n, (f, x) in sheets.items():
+            zf.writestr(f"xl/worksheets/{f}", x)
+
+
+def _cells(refs):
+    out = []
+    for ref, v in refs.items():
+        if isinstance(v, str):
+            out.append(f'<c r="{ref}" t="str"><v>{v}</v></c>')
+        else:
+            out.append(f'<c r="{ref}"><v>{v}</v></c>')
+    return "<row>" + "".join(out) + "</row>"
+
+
+import gold_cbfile as CBF                             # noqa: E402
+_ws = tempfile.mkdtemp(prefix="gold_cb_")
+_savews = (C.WORKSPACE, C.DB_PATH)
+C.WORKSPACE, C.DB_PATH = _ws, os.path.join(_ws, "t.db")
+os.makedirs(os.path.join(_ws, "data"))
+_mdays = (31, 28, 31, 30, 31, 30, 31)                  # 2002-02起各月天数
+_serials = {c: 37257 + sum(_mdays[:i]) for i, c in
+            enumerate(["D", "E", "F", "G", "H", "I", "J", "K"])}   # 2002-01起各月首
+_changes_rows = "".join([
+    _cells({"A": "This month Col =>"}),
+    _cells({"A": "x", **{f"{c}4": s for c, s in _serials.items()}}),
+    _cells({"A": "Country Lookup Column"}),
+    _cells({"A": "Poland, Republic of", "D": 5.0, "E": 6.0}),
+    _cells({"A": "China, People's Republic of", "D": 1.0, "E": 2.0}),
+    _cells({"A": "Türkiye, Republic of", "D": 99.0}),   # 应被剔除的重复行
+])
+_mkxlsx(os.path.join(_ws, "data", "Changes_latest_as_of_test_IFS.xlsx"),
+        {"Monthly": ("sheet1.xml",
+                     f'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                     f'<sheetData>{_changes_rows}</sheetData></worksheet>')})
+_ch = CBF.parse_changes(CBF.find_changes_file())
+check("WGC: 月份序列解析",
+      _ch["months"] == [f"2002-{m:02d}" for m in range(1, 9)], _ch["months"])
+check("WGC: 国家行解析+表头跳过",
+      set(_ch["changes"]) == {"Poland, Republic of", "China, People's Republic of"},
+      set(_ch["changes"]))
+_m = CBF.window_metrics(_ch)
+check("WGC: 12月窗口全球合计", _m["world"] == 14.0 and _m["to"] == "2002-08", _m)
+check("WGC: 增持榜排序", _m["by"]["Poland, Republic of"] == 11.0, _m["by"])
+
+_h_rows = "".join([
+    _cells({"A": "Tonnes"}),
+    _cells({"A": 1, "B": "United States", "C": 8133.4, "D": 0.8142, "E": 46203}),
+    _cells({"A": 2, "B": "Turkey5)", "C": 530.6, "D": 0.564, "E": 46173}),
+])
+_mkxlsx(os.path.join(_ws, "data", "World_official_gold_holdings_as_of_test_IFS.xlsx"),
+        {"PDF": ("sheet1.xml",
+                 f'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                 f'<sheetData>{_h_rows}</sheetData></worksheet>')})
+_h = CBF.parse_holdings(CBF.find_holdings_file())
+check("WGC: 持仓榜解析+脚注清理",
+      len(_h["rows"]) == 2 and _h["rows"][1][1] == "Turkey"
+      and _h["rows"][0][2] == 8133.4 and _h["rows"][1][3] == 56.4,
+      _h["rows"])
+check("WGC: 持仓asof序列换算", _h["asof_max"] == "2026-06-30", _h["asof_max"])
+C.WORKSPACE, C.DB_PATH = _savews
+
+# ------------------------------------------------------------
 print()
 if FAILS:
     print(f"❌ {len(FAILS)} 项失败: {FAILS}")
