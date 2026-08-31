@@ -949,7 +949,9 @@ if(CB.dates && CB.dates.length>=3){
 /* 各国近12月净购金 TOP10: 横向条形, 蓝=增持/橙=减持 */
 const CW=DATA.cbworld||{names:[],vals:[]};
 if(CW.names.length){
- mk('cbworld',{tooltip:{...TIPX,formatter:p=>`${CW.names[p.dataIndex]} 近12月净购金 <b>${CW.vals[p.dataIndex]:+.1f}</b> 吨`},
+ mk('cbworld',{tooltip:{...TIPX,formatter:p=>{
+   const v=CW.vals[p.dataIndex];
+   return CW.names[p.dataIndex]+' 近12月净购金 <b>'+(v>0?'+':'')+v.toFixed(1)+'</b> 吨';}},
   grid:{left:76,right:44,top:8,bottom:8},
   xAxis:{type:'value',...AXS,splitLine:{show:false}},
   yAxis:{type:'category',inverse:true,data:CW.names,
