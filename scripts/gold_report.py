@@ -767,12 +767,6 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
  </div>
 </div>
 
-<div class="card">
- <h3>国内溢价（上海金 ÷ 伦敦金×USDCNY − 1）</h3>
- <div class="sub">正值=国内金贵（实物抢金信号）；灰色带为汇率基差噪声区（±@NOISE@%）</div>
- <div id="premium" class="chart"></div>
-</div>
-
 <div class="grid2">
  <div class="card">
   <h3>温度分构成 @TEMP_MISSING@</h3>
@@ -784,6 +778,12 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
   <table><tr><th>因子</th><th>原始值</th><th>z</th><th>分数</th><th>权重</th><th>窗口</th></tr>
   @ATT_ROWS@</table>
  </div>
+</div>
+
+<div class="card">
+ <h3>国内溢价（上海金 ÷ 伦敦金×USDCNY − 1）</h3>
+ <div class="sub">正值=国内金贵（实物抢金信号）；灰色带为汇率基差噪声区（±@NOISE@%）</div>
+ <div id="premium" class="chart"></div>
 </div>
 
 <div class="grid2">
