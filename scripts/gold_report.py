@@ -769,14 +769,14 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
 
 <div class="grid2">
  <div class="card">
-  <h3>温度分构成 @TEMP_MISSING@</h3>
-  <table><tr><th>组别</th><th>因子</th><th>原始值</th><th>分数</th><th>权重</th><th>方向</th><th>窗口</th></tr>
-  @TEMP_ROWS@</table>
- </div>
- <div class="card">
   <h3>关注分构成</h3>
   <table><tr><th>因子</th><th>原始值</th><th>z</th><th>分数</th><th>权重</th><th>窗口</th></tr>
   @ATT_ROWS@</table>
+ </div>
+ <div class="card">
+  <h3>温度分构成 @TEMP_MISSING@</h3>
+  <table><tr><th>组别</th><th>因子</th><th>原始值</th><th>分数</th><th>权重</th><th>方向</th><th>窗口</th></tr>
+  @TEMP_ROWS@</table>
  </div>
 </div>
 
