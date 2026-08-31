@@ -627,7 +627,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);
  font:14px/1.6 system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-.wrap{max-width:1080px;margin:0 auto;padding:24px 20px 48px}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 20px 48px}
 header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
 h1{font-size:20px;margin:0}
 .meta{color:var(--muted);font-size:12px}
